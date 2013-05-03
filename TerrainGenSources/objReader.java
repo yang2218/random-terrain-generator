@@ -34,7 +34,8 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         public Point3f center;
         public int num_verts;		// number of vertices
         public int num_faces;		// number of triangle faces
-
+        public float objHeight;
+        
         public void Draw() {
             vertexBuffer.rewind();
             normalBuffer.rewind();
@@ -66,7 +67,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             int v1, v2, v3;
             float minx, miny, minz;
             float maxx, maxy, maxz;
-            float bbx, bby, bbz;
+            float bbx,bby, bbz;
             minx = miny = minz = 10000.f;
             maxx = maxy = maxz = -10000.f;
 
@@ -122,12 +123,12 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             bby = maxy - miny;
             bbz = maxz - minz;
             float bbmax = Math.max(bbx, Math.max(bby, bbz));
-
+            objHeight = Math.abs((miny - center.y)/bby);
             for (Point3f p : input_verts) {
 
                 p.x = (p.x - center.x) / bbmax;
                 p.y = (p.y - center.y) / bbmax;
-                p.z = (p.z - center.z) / bbmax;
+                p.z = (p.z - center.z) / bbmax;                
             }
             center.x = center.y = center.z = 0.f;
 
@@ -215,6 +216,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
     float terrainSharpness = 3f;
     float terrainSize = 30f;
     Vector3f[][] points;
+    private int numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random()*0.1f);
     private boolean showTerrain = false;
     private float xmin = -4f, ymin = -4f, zmin = -4f;
     private float xmax = 4f, ymax = 4f, zmax = 4f;
@@ -354,48 +356,53 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         gl.glEnable(GL.GL_CULL_FACE);
         gl.glShadeModel(GL.GL_SMOOTH);
 
+        terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
+        points = terrain.points;
+        showTerrain = true;
+
         //create randomly generated object positions
         sceneObjects = new ArrayList<objPosition>();
 
         //improve to include negative values and possibly alter objPosition
         //to hold an object instead of string (removes switch statement)
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < numberOfObjects; i++) {
             //change this later for more modular random generation
-            float x = (float) (4 * Math.random());
-            float z = (float) (4 * Math.random());
+            float x = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
+            float z = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
 
             float scale = (float) (4 * Math.random());
-
-            int objectInt = (int) Math.random();
-
+            int tempRand = (int) (Math.random()*100);
+            int objectInt = 0;
+            if (0<=tempRand && tempRand<50) {objectInt = 0;}   
+            else if (50<=tempRand && tempRand<95) {objectInt = 1;}
+            //else if (70<=tempRand && tempRand<85) {objectInt = 2;}
+            //else if (85<=tempRand && tempRand<95) {objectInt = 3;}
+            else if (95<=tempRand && tempRand<=100) {objectInt = 5;}
+            System.out.println(objectInt);
             String object = "tree_aspen";
 
             switch (objectInt) {
                 case 0:
-                    sceneObjects.add(new objPosition(tree_aspen, 4, 4));
+                    sceneObjects.add(new objPosition(tree_aspen, x, z, tree_aspen.objHeight));
                     break;
                 case 1:
-                    sceneObjects.add(new objPosition(tree_conical, 4, 4));
+                    sceneObjects.add(new objPosition(tree_conical, x, z, tree_conical.objHeight));
                     break;
                 case 2:
-                    sceneObjects.add(new objPosition(statue, 4, 4));
+                    sceneObjects.add(new objPosition(plant, x, z, plant.objHeight));
                     break;
                 case 3:
-                    sceneObjects.add(new objPosition(tulip, 4, 4));
+                    sceneObjects.add(new objPosition(tulip, x, z, tulip.objHeight));
                     break;
                 case 4:
-                    sceneObjects.add(new objPosition(cactus, 4, 4));
+                    sceneObjects.add(new objPosition(cactus, x, z, cactus.objHeight));
                     break;
                 case 5:
-                    sceneObjects.add(new objPosition(plant, 4, 4));
+                    sceneObjects.add(new objPosition(statue, x, z, statue.objHeight));                 
                     break;
-            }
-
+            }            
         }
-        
-        terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
-        points = terrain.points;
-        showTerrain = true;
+        setObjYvals();
     }
 
     public static void main(String[] args) {
@@ -447,13 +454,29 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         for (objPosition o : sceneObjects) {
             gl.glPushMatrix();
 
-            gl.glTranslatef(o.getX(), 0, o.getZ());
+            gl.glTranslatef(o.getX(), o.getY(), o.getZ());
 
             o.getModel().Draw();
 
             gl.glPopMatrix();
         }
 
+    }
+
+    public void setObjYvals() {
+        for (objPosition o : sceneObjects) {
+            float x = o.getX();
+            float z = o.getZ();
+            float y = 0f;
+            float quadDiag = (float) Math.sqrt((2 * Math.pow(terrainSize / terrainDim, 2)));
+            for (int i = 0; i < terrain.dim + 1; i++) {
+                for (int j = 0; j < terrain.dim + 1; j++) {
+                    if (Math.abs(Math.sqrt(Math.pow(points[i][j].x - x, 2) + Math.pow(points[i][j].z - z, 2))) < quadDiag) {
+                        o.y = points[i][j].y;
+                    }
+                }
+            }
+        }
     }
 
     @Override
@@ -516,12 +539,14 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
                 terrainSharpness += 0.1f;
                 terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
                 points = terrain.points;
+                setObjYvals();
                 System.out.println(terrainSharpness);
                 break;
             case KeyEvent.VK_DOWN:
                 terrainSharpness -= 0.1f;
                 terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
                 points = terrain.points;
+                setObjYvals();
                 System.out.println(terrainSharpness);
                 break;
             case 'w':
