@@ -35,7 +35,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         public int num_verts;		// number of vertices
         public int num_faces;		// number of triangle faces
         public float objHeight;
-        
+
         public void Draw() {
             vertexBuffer.rewind();
             normalBuffer.rewind();
@@ -67,7 +67,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             int v1, v2, v3;
             float minx, miny, minz;
             float maxx, maxy, maxz;
-            float bbx,bby, bbz;
+            float bbx, bby, bbz;
             minx = miny = minz = 10000.f;
             maxx = maxy = maxz = -10000.f;
 
@@ -123,12 +123,12 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             bby = maxy - miny;
             bbz = maxz - minz;
             float bbmax = Math.max(bbx, Math.max(bby, bbz));
-            objHeight = Math.abs((miny - center.y)/bby);
+            objHeight = Math.abs((miny - center.y) / bby);
             for (Point3f p : input_verts) {
 
                 p.x = (p.x - center.x) / bbmax;
                 p.y = (p.y - center.y) / bbmax;
-                p.z = (p.z - center.z) / bbmax;                
+                p.z = (p.z - center.z) / bbmax;
             }
             center.x = center.y = center.z = 0.f;
 
@@ -216,7 +216,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
     float terrainSharpness = 3f;
     float terrainSize = 30f;
     Vector3f[][] points;
-    private int numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random()*0.1f);
+    private int numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random() * 0.2f);
     private boolean showTerrain = false;
     private float xmin = -4f, ymin = -4f, zmin = -4f;
     private float xmax = 4f, ymax = 4f, zmax = 4f;
@@ -360,48 +360,21 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         points = terrain.points;
         showTerrain = true;
 
-        //create randomly generated object positions
         sceneObjects = new ArrayList<objPosition>();
-
-        //improve to include negative values and possibly alter objPosition
-        //to hold an object instead of string (removes switch statement)
+        float[][] objPositions = new float[2][numberOfObjects];
+        // Creates a 2D-array for storing the x- and z values of the objects before they are assigned to the object objPosition.
+        // The values are generated randomly within a range of {- terrain_size, terrain_size}.
         for (int i = 0; i < numberOfObjects; i++) {
-            //change this later for more modular random generation
-            float x = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
-            float z = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
-
-            float scale = (float) (4 * Math.random());
-            int tempRand = (int) (Math.random()*100);
-            int objectInt = 0;
-            if (0<=tempRand && tempRand<50) {objectInt = 0;}   
-            else if (50<=tempRand && tempRand<95) {objectInt = 1;}
-            //else if (70<=tempRand && tempRand<85) {objectInt = 2;}
-            //else if (85<=tempRand && tempRand<95) {objectInt = 3;}
-            else if (95<=tempRand && tempRand<=100) {objectInt = 5;}
-            System.out.println(objectInt);
-            String object = "tree_aspen";
-
-            switch (objectInt) {
-                case 0:
-                    sceneObjects.add(new objPosition(tree_aspen, x, z, tree_aspen.objHeight));
-                    break;
-                case 1:
-                    sceneObjects.add(new objPosition(tree_conical, x, z, tree_conical.objHeight));
-                    break;
-                case 2:
-                    sceneObjects.add(new objPosition(plant, x, z, plant.objHeight));
-                    break;
-                case 3:
-                    sceneObjects.add(new objPosition(tulip, x, z, tulip.objHeight));
-                    break;
-                case 4:
-                    sceneObjects.add(new objPosition(cactus, x, z, cactus.objHeight));
-                    break;
-                case 5:
-                    sceneObjects.add(new objPosition(statue, x, z, statue.objHeight));                 
-                    break;
-            }            
+            float x = (float) ((terrainSize * 0.5f) * (Math.random() * 2 - 1));
+            float z = (float) ((terrainSize * 0.5f) * (Math.random() * 2 - 1));
+            objPositions[0][i] = x;
+            objPositions[1][i] = z;
         }
+        boolean collision = true;
+        while (collision) {
+            collision = collisionDetection(objPositions);
+        }
+        generateObjects(objPositions);
         setObjYvals();
     }
 
@@ -429,7 +402,8 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         gl.glRotatef(360.f - roth, 0, 1.0f, 0);
         gl.glRotatef(rotv, 1.0f, 0, 0);
         gl.glTranslatef(-centerx, -centery, -centerz);
-
+        
+        //Draws GL.Quads using the points retrieved from the TerrainGenerator class.
         if (showTerrain) {
             gl.glBegin(GL.GL_QUADS);
             for (int i = 0; i < terrain.dim + 1; i++) {
@@ -450,7 +424,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             }
             gl.glEnd();
         }
-        //simple implementation of random object placement
+        //Draws objects.
         for (objPosition o : sceneObjects) {
             gl.glPushMatrix();
 
@@ -462,7 +436,80 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         }
 
     }
+    // Generates random objects (objPositions) and adds them to the arraylist sceneObjects;
+    public void generateObjects(float[][] objPositions) {
+        for (int i = 0; i < numberOfObjects; i++) {           
+            float scale = (float) (4 * Math.random());
+            int tempRand = (int) (Math.random() * 100);
+            int objectInt = 0;
+            if (0 <= tempRand && tempRand < 50) {
+                objectInt = 0;
+            } else if (50 <= tempRand && tempRand < 99) {
+                objectInt = 1;
+            } //else if (70<=tempRand && tempRand<85) {objectInt = 2;}
+            //else if (85<=tempRand && tempRand<95) {objectInt = 3;}
+            else if (99 <= tempRand && tempRand <= 100) {
+                objectInt = 5;
+            }
+            String object = "tree_aspen";
 
+            switch (objectInt) {
+                case 0:
+                    sceneObjects.add(new objPosition(tree_aspen, objPositions[0][i], objPositions[1][i], tree_aspen.objHeight));
+                    break;
+                case 1:
+                    sceneObjects.add(new objPosition(tree_conical, objPositions[0][i], objPositions[1][i], tree_conical.objHeight));
+                    break;
+                case 2:
+                    sceneObjects.add(new objPosition(plant, objPositions[0][i], objPositions[1][i], plant.objHeight));
+                    break;
+                case 3:
+                    sceneObjects.add(new objPosition(tulip, objPositions[0][i], objPositions[1][i], tulip.objHeight));
+                    break;
+                case 4:
+                    sceneObjects.add(new objPosition(cactus, objPositions[0][i], objPositions[1][i], cactus.objHeight));
+                    break;
+                case 5:
+                    sceneObjects.add(new objPosition(statue, objPositions[0][i], objPositions[1][i], statue.objHeight));
+                    break;
+            }
+        }
+    }
+    // This method loops over all of the objects and checks if their x- and z coordinates are too close to eachother.
+    // If this is the case, both objeects are moved away from eachother in a way that is not reversed when the loop
+    // reaches the reversed case (when p(i), p(j) becomes p(j), p(i).
+    // Could be improved to use the bounding box values of the objects as the maximally allowed distance.
+    public boolean collisionDetection(float[][] positions) {
+        boolean collision = false;
+        for (int i = 0; i < positions[0].length; i++) {
+            for (int j = 0; j < positions[0].length; j++) {
+                if (positions[0][i] == positions[0][j] && positions[1][i] == positions[1][j]) {
+                } else if (Math.sqrt(Math.pow(positions[0][i] - positions[0][j], 2) + Math.pow(positions[1][i] - positions[1][j], 2)) < 1.5f) {
+                    //System.out.println(positions[0][i] + "   " + positions[0][j]);
+                    //System.out.println(positions[1][i] + "   " + positions[1][j]);
+                    //System.out.println(Math.sqrt(Math.pow(positions[0][i] - positions[0][j], 2) + Math.pow(positions[1][i] - positions[1][j], 2)));
+                    //System.out.println(i + "   " + j);
+
+                    if (i < j) {
+                        positions[0][j] += 0.3f;
+                        positions[1][j] += 0.3f;
+                        positions[0][i] += -0.3f;
+                        positions[1][i] += -0.3f;
+                    }
+                    else{
+                        positions[0][j] += -0.3f;
+                        positions[1][j] += -0.3f;
+                        positions[0][i] += 0.3f;
+                        positions[1][i] += 0.3f;
+                    }
+                    collision = true;
+                }
+            }
+        }
+        return collision;
+    }
+    // Locates the mesh vertex closest to the x- and z coordinates of the objects and sets the y-coordinate of the object
+    // to the same value as the y-value of the mesh vertex.
     public void setObjYvals() {
         for (objPosition o : sceneObjects) {
             float x = o.getX();
@@ -472,7 +519,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             for (int i = 0; i < terrain.dim + 1; i++) {
                 for (int j = 0; j < terrain.dim + 1; j++) {
                     if (Math.abs(Math.sqrt(Math.pow(points[i][j].x - x, 2) + Math.pow(points[i][j].z - z, 2))) < quadDiag) {
-                        o.y = points[i][j].y;
+                        o.y = points[i][j].y - 0.05f;
                     }
                 }
             }
