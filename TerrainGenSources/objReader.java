@@ -1,17 +1,20 @@
-
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 
+import javax.imageio.ImageIO;
 import javax.media.opengl.GL;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLCanvas;
@@ -32,14 +35,22 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         public IntBuffer faceBuffer;
         public FloatBuffer normalBuffer;
         public Point3f center;
-        public int num_verts;		// number of vertices
-        public int num_faces;		// number of triangle faces
+        public int num_verts;           // number of vertices
+        public int num_faces;           // number of triangle faces
         public float objHeight;
-
+        
+        int[] texture;
+        
         public void Draw() {
             vertexBuffer.rewind();
             normalBuffer.rewind();
             faceBuffer.rewind();
+            
+            gl.glEnable(GL.GL_TEXTURE_2D);
+            gl.glBindTexture(GL.GL_TEXTURE_2D, texture[0]);
+            gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR);
+            gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
+            
             gl.glEnableClientState(GL.GL_VERTEX_ARRAY);
             gl.glEnableClientState(GL.GL_NORMAL_ARRAY);
 
@@ -50,9 +61,58 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
 
             gl.glDisableClientState(GL.GL_VERTEX_ARRAY);
             gl.glDisableClientState(GL.GL_NORMAL_ARRAY);
+            
         }
 
+
+        public void init(GL gl) {
+            
+            gl.glGenTextures(1, texture, 0);
+            gl.glBindTexture(GL.GL_TEXTURE_2D, texture[0]);
+            ByteBuffer b = genTexture(32);
+            gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA8, 32, 32, 0, GL.GL_RGB, GL.GL_BYTE, b);
+        }
+        
+        private ByteBuffer genTexture(int size) {
+            ByteBuffer b = BufferUtil.newByteBuffer(size * size * 3);
+            byte[] b2 = new byte[size * size * 3];
+            //Random r = new Random();
+            //r.nextBytes(b2);
+            
+            for(int i = 0; i < b2.length; i += 3){
+            	
+            	int r1 = 0;
+            	int g1 = 91;
+            	int bl1 = 0;
+            	int r2 = 99;
+            	int g2 = 49;
+            	int bl2 = 14;
+            	
+            	double weight = Math.random();
+            	
+            	int texR = (int)((weight*r1) + (1-weight)*(r2)); 
+            	int texG = (int)((weight*g1) + (1-weight)*(g2));
+            	int texB = (int)((weight*bl1) + (1-weight)*(bl2));
+            	
+            	Integer r = new Integer(texR);
+            	Integer g = new Integer(texG);
+            	Integer bl = new Integer(texB);
+            	
+            	b2[i] = r.byteValue();
+            	b2[i+1] = g.byteValue();
+            	b2[i+2] = bl.byteValue();
+            	
+            }
+            
+            b.put(b2);
+            b.flip();
+            return b;
+        }
+        
         public objModel(String filename) {
+        	
+        	texture = new int[1];
+        	
             /* load a triangular mesh model from a .obj file */
             BufferedReader in = null;
             try {
@@ -67,7 +127,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             int v1, v2, v3;
             float minx, miny, minz;
             float maxx, maxy, maxz;
-            float bbx, bby, bbz;
+            float bbx,bby, bbz;
             minx = miny = minz = 10000.f;
             maxx = maxy = maxz = -10000.f;
 
@@ -123,12 +183,12 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             bby = maxy - miny;
             bbz = maxz - minz;
             float bbmax = Math.max(bbx, Math.max(bby, bbz));
-            objHeight = Math.abs((miny - center.y) / bby);
+            objHeight = Math.abs((miny - center.y)/bby);
             for (Point3f p : input_verts) {
 
                 p.x = (p.x - center.x) / bbmax;
                 p.y = (p.y - center.y) / bbmax;
-                p.z = (p.z - center.z) / bbmax;
+                p.z = (p.z - center.z) / bbmax;                
             }
             center.x = center.y = center.z = 0.f;
 
@@ -216,10 +276,12 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
     float terrainSharpness = 3f;
     float terrainSize = 30f;
     Vector3f[][] points;
-    private int numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random() * 0.2f);
+    private int numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random()*0.1f);
     private boolean showTerrain = false;
     private float xmin = -4f, ymin = -4f, zmin = -4f;
     private float xmax = 4f, ymax = 4f, zmax = 4f;
+    
+    private int[] textures;
 
     public objReader() {
         super("Procedural Terrain Gen");
@@ -228,7 +290,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         canvas.addKeyListener(this);
         canvas.addMouseListener(this);
         canvas.addMouseMotionListener(this);
-        animator = new FPSAnimator(canvas, 30);	// create a 30 fps animator
+        animator = new FPSAnimator(canvas, 30); // create a 30 fps animator
         getContentPane().add(canvas);
         setSize(winW, winH);
         setLocationRelativeTo(null);
@@ -302,22 +364,6 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         gl.glLightfv(GL.GL_LIGHT2, GL.GL_DIFFUSE, light2_diffuse, 0);
         gl.glLightfv(GL.GL_LIGHT2, GL.GL_SPECULAR, light2_specular, 0);
 
-        //cyan light
-        float light3_position[] = {-.1f, -.1f, 0, 0};
-        float light3_diffuse[] = {.05f, .8f, .75f, 1};
-        float light3_specular[] = {.05f, .8f, .75f, 1};
-        gl.glLightfv(GL.GL_LIGHT3, GL.GL_POSITION, light3_position, 0);
-        gl.glLightfv(GL.GL_LIGHT3, GL.GL_DIFFUSE, light3_diffuse, 0);
-        gl.glLightfv(GL.GL_LIGHT3, GL.GL_SPECULAR, light3_specular, 0);
-
-        //yellow light
-        float light4_position[] = {.1f, 0, 0, 0};
-        float light4_diffuse[] = {.75f, .75f, .05f, 1};
-        float light4_specular[] = {.75f, .75f, .05f, 1};
-        gl.glLightfv(GL.GL_LIGHT4, GL.GL_POSITION, light4_position, 0);
-        gl.glLightfv(GL.GL_LIGHT4, GL.GL_DIFFUSE, light4_diffuse, 0);
-        gl.glLightfv(GL.GL_LIGHT4, GL.GL_SPECULAR, light4_specular, 0);
-
         //material
         float mat_ambient[] = {0, 0, 0, 1};
         float mat_specular[] = {.8f, .8f, .8f, 1};
@@ -360,24 +406,75 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         points = terrain.points;
         showTerrain = true;
 
+        //create randomly generated object positions
         sceneObjects = new ArrayList<objPosition>();
-        float[][] objPositions = new float[2][numberOfObjects];
-        // Creates a 2D-array for storing the x- and z values of the objects before they are assigned to the object objPosition.
-        // The values are generated randomly within a range of {- terrain_size, terrain_size}.
+
+        tree_aspen.init(gl);
+        tree_conical.init(gl);
+        statue.init(gl);
+        
+        //improve to include negative values and possibly alter objPosition
+        //to hold an object instead of string (removes switch statement)
         for (int i = 0; i < numberOfObjects; i++) {
-            float x = (float) ((terrainSize * 0.5f) * (Math.random() * 2 - 1));
-            float z = (float) ((terrainSize * 0.5f) * (Math.random() * 2 - 1));
-            objPositions[0][i] = x;
-            objPositions[1][i] = z;
+            //change this later for more modular random generation
+            float x = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
+            float z = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
+
+            float scale = (float) (4 * Math.random());
+            int tempRand = (int) (Math.random()*100);
+            int objectInt = 0;
+            if (0<=tempRand && tempRand<50) {objectInt = 0;}   
+            else if (50<=tempRand && tempRand<95) {objectInt = 1;}
+            //else if (70<=tempRand && tempRand<85) {objectInt = 2;}
+            //else if (85<=tempRand && tempRand<95) {objectInt = 3;}
+            else if (95<=tempRand && tempRand<=100) {objectInt = 5;}
+            System.out.println(objectInt);
+
+            switch (objectInt) {
+                case 0:
+                    sceneObjects.add(new objPosition(tree_aspen, x, z, tree_aspen.objHeight));
+                    break;
+                case 1:
+                    sceneObjects.add(new objPosition(tree_conical, x, z, tree_conical.objHeight));
+                    break;
+                case 2:
+                    sceneObjects.add(new objPosition(plant, x, z, plant.objHeight));
+                    break;
+                case 3:
+                    sceneObjects.add(new objPosition(tulip, x, z, tulip.objHeight));
+                    break;
+                case 4:
+                    sceneObjects.add(new objPosition(cactus, x, z, cactus.objHeight));
+                    break;
+                case 5:
+                    sceneObjects.add(new objPosition(statue, x, z, statue.objHeight));                 
+                    break;
+            }            
         }
-        boolean collision = true;
-        while (collision) {
-            collision = collisionDetection(objPositions);
-        }
-        generateObjects(objPositions);
         setObjYvals();
+        
+        loadTexture("texture2.bmp");
     }
 
+    public int loadTexture(String texFile){
+    	
+    	BufferedImage image = null;
+    	
+    	try {
+			image = ImageIO.read(new File(texFile));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	textures = new int[image.getWidth()*image.getHeight()];
+    	
+    	image.getRGB(0, 0, image.getWidth(), image.getHeight(), textures, 0, image.getWidth());
+    	
+    	return 0;
+    }
+    
+    
     public static void main(String[] args) {
 
         new objReader();
@@ -402,29 +499,43 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         gl.glRotatef(360.f - roth, 0, 1.0f, 0);
         gl.glRotatef(rotv, 1.0f, 0, 0);
         gl.glTranslatef(-centerx, -centery, -centerz);
+
+        gl.glEnable(GL.GL_TEXTURE_2D);
         
-        //Draws GL.Quads using the points retrieved from the TerrainGenerator class.
+        
         if (showTerrain) {
             gl.glBegin(GL.GL_QUADS);
             for (int i = 0; i < terrain.dim + 1; i++) {
                 for (int j = 0; j < terrain.dim + 1; j++) {
                     if (i != terrain.dim && j != terrain.dim) {
+                    	gl.glBindTexture(GL.GL_TEXTURE_2D, textures[0]);
+                    	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR);
+                    	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
+                    	
                         Vector3f normal = new Vector3f();
                         Vector3f tempVec1 = new Vector3f(points[i + 1][j].x - points[i][j].x, points[i + 1][j].y - points[i][j].y, points[i + 1][j].z - points[i][j].z);
                         Vector3f tempVec2 = new Vector3f(points[i][j + 1].x - points[i][j].x, points[i][j + 1].y - points[i][j].y, points[i][j + 1].z - points[i][j].z);
                         normal.cross(tempVec2, tempVec1);
                         gl.glColor3f(Math.abs(points[i][j].y * 0.3f), Math.abs(points[i][j].y * 1f), Math.abs(points[i][j].y * 0.3f));
                         gl.glNormal3f(normal.x, normal.y, normal.z);
+                        
+                        gl.glTexCoord2f(points[i][j].x, points[i][j].z);
                         gl.glVertex3f(points[i][j].x, points[i][j].y, points[i][j].z);
+                        
+                        gl.glTexCoord2f(points[i][j + 1].x, points[i][j + 1].z);
                         gl.glVertex3f(points[i][j + 1].x, points[i][j + 1].y, points[i][j + 1].z);
+                        
+                        gl.glTexCoord2f(points[i + 1][j + 1].x, points[i + 1][j + 1].z);
                         gl.glVertex3f(points[i + 1][j + 1].x, points[i + 1][j + 1].y, points[i + 1][j + 1].z);
+                        
+                        gl.glTexCoord2f(points[i + 1][j].x, points[i + 1][j].z);
                         gl.glVertex3f(points[i + 1][j].x, points[i + 1][j].y, points[i + 1][j].z);
                     }
                 }
             }
             gl.glEnd();
         }
-        //Draws objects.
+        //simple implementation of random object placement
         for (objPosition o : sceneObjects) {
             gl.glPushMatrix();
 
@@ -435,81 +546,10 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             gl.glPopMatrix();
         }
 
+        gl.glDisable(GL.GL_TEXTURE_2D);
+        
     }
-    // Generates random objects (objPositions) and adds them to the arraylist sceneObjects;
-    public void generateObjects(float[][] objPositions) {
-        for (int i = 0; i < numberOfObjects; i++) {           
-            float scale = (float) (4 * Math.random());
-            int tempRand = (int) (Math.random() * 100);
-            int objectInt = 0;
-            if (0 <= tempRand && tempRand < 50) {
-                objectInt = 0;
-            } else if (50 <= tempRand && tempRand < 99) {
-                objectInt = 1;
-            } //else if (70<=tempRand && tempRand<85) {objectInt = 2;}
-            //else if (85<=tempRand && tempRand<95) {objectInt = 3;}
-            else if (99 <= tempRand && tempRand <= 100) {
-                objectInt = 5;
-            }
-            String object = "tree_aspen";
 
-            switch (objectInt) {
-                case 0:
-                    sceneObjects.add(new objPosition(tree_aspen, objPositions[0][i], objPositions[1][i], tree_aspen.objHeight));
-                    break;
-                case 1:
-                    sceneObjects.add(new objPosition(tree_conical, objPositions[0][i], objPositions[1][i], tree_conical.objHeight));
-                    break;
-                case 2:
-                    sceneObjects.add(new objPosition(plant, objPositions[0][i], objPositions[1][i], plant.objHeight));
-                    break;
-                case 3:
-                    sceneObjects.add(new objPosition(tulip, objPositions[0][i], objPositions[1][i], tulip.objHeight));
-                    break;
-                case 4:
-                    sceneObjects.add(new objPosition(cactus, objPositions[0][i], objPositions[1][i], cactus.objHeight));
-                    break;
-                case 5:
-                    sceneObjects.add(new objPosition(statue, objPositions[0][i], objPositions[1][i], statue.objHeight));
-                    break;
-            }
-        }
-    }
-    // This method loops over all of the objects and checks if their x- and z coordinates are too close to eachother.
-    // If this is the case, both objeects are moved away from eachother in a way that is not reversed when the loop
-    // reaches the reversed case (when p(i), p(j) becomes p(j), p(i).
-    // Could be improved to use the bounding box values of the objects as the maximally allowed distance.
-    public boolean collisionDetection(float[][] positions) {
-        boolean collision = false;
-        for (int i = 0; i < positions[0].length; i++) {
-            for (int j = 0; j < positions[0].length; j++) {
-                if (positions[0][i] == positions[0][j] && positions[1][i] == positions[1][j]) {
-                } else if (Math.sqrt(Math.pow(positions[0][i] - positions[0][j], 2) + Math.pow(positions[1][i] - positions[1][j], 2)) < 1.5f) {
-                    //System.out.println(positions[0][i] + "   " + positions[0][j]);
-                    //System.out.println(positions[1][i] + "   " + positions[1][j]);
-                    //System.out.println(Math.sqrt(Math.pow(positions[0][i] - positions[0][j], 2) + Math.pow(positions[1][i] - positions[1][j], 2)));
-                    //System.out.println(i + "   " + j);
-
-                    if (i < j) {
-                        positions[0][j] += 0.3f;
-                        positions[1][j] += 0.3f;
-                        positions[0][i] += -0.3f;
-                        positions[1][i] += -0.3f;
-                    }
-                    else{
-                        positions[0][j] += -0.3f;
-                        positions[1][j] += -0.3f;
-                        positions[0][i] += 0.3f;
-                        positions[1][i] += 0.3f;
-                    }
-                    collision = true;
-                }
-            }
-        }
-        return collision;
-    }
-    // Locates the mesh vertex closest to the x- and z coordinates of the objects and sets the y-coordinate of the object
-    // to the same value as the y-value of the mesh vertex.
     public void setObjYvals() {
         for (objPosition o : sceneObjects) {
             float x = o.getX();
@@ -519,7 +559,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             for (int i = 0; i < terrain.dim + 1; i++) {
                 for (int j = 0; j < terrain.dim + 1; j++) {
                     if (Math.abs(Math.sqrt(Math.pow(points[i][j].x - x, 2) + Math.pow(points[i][j].z - z, 2))) < quadDiag) {
-                        o.y = points[i][j].y - 0.05f;
+                        o.y = points[i][j].y;
                     }
                 }
             }
