@@ -453,7 +453,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         }
         setObjYvals();
         
-        //loadTexture("texture2.bmp");
+        loadTexture("texture2.bmp");
     }
 
     public int loadTexture(String texFile){
