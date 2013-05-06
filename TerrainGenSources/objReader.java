@@ -456,6 +456,60 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         loadTexture("texture2.bmp");
     }
 
+    public void resize(){
+    	terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
+        points = terrain.points;
+        showTerrain = true;
+
+        //create randomly generated object positions
+        sceneObjects = new ArrayList<objPosition>();
+
+        tree_aspen.init(gl);
+        tree_conical.init(gl);
+        statue.init(gl);
+        
+        //improve to include negative values and possibly alter objPosition
+        //to hold an object instead of string (removes switch statement)
+        for (int i = 0; i < numberOfObjects; i++) {
+            //change this later for more modular random generation
+            float x = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
+            float z = (float) ((terrainSize*0.5f) * (Math.random()*2 - 1));
+
+            float scale = (float) (4 * Math.random());
+            int tempRand = (int) (Math.random()*100);
+            int objectInt = 0;
+            if (0<=tempRand && tempRand<50) {objectInt = 0;}   
+            else if (50<=tempRand && tempRand<95) {objectInt = 1;}
+            //else if (70<=tempRand && tempRand<85) {objectInt = 2;}
+            //else if (85<=tempRand && tempRand<95) {objectInt = 3;}
+            else if (95<=tempRand && tempRand<=100) {objectInt = 5;}
+            System.out.println(objectInt);
+
+            switch (objectInt) {
+                case 0:
+                    sceneObjects.add(new objPosition(tree_aspen, x, z, tree_aspen.objHeight));
+                    break;
+                case 1:
+                    sceneObjects.add(new objPosition(tree_conical, x, z, tree_conical.objHeight));
+                    break;
+                case 2:
+                    sceneObjects.add(new objPosition(plant, x, z, plant.objHeight));
+                    break;
+                case 3:
+                    sceneObjects.add(new objPosition(tulip, x, z, tulip.objHeight));
+                    break;
+                case 4:
+                    sceneObjects.add(new objPosition(cactus, x, z, cactus.objHeight));
+                    break;
+                case 5:
+                    sceneObjects.add(new objPosition(statue, x, z, statue.objHeight));                 
+                    break;
+            }            
+        }
+        setObjYvals();
+    }
+    
+    
     public int loadTexture(String texFile){
     	
     	BufferedImage image = null;
@@ -473,8 +527,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
     	
     	return 0;
     }
-    
-    
+       
     public static void main(String[] args) {
 
         new objReader();
@@ -644,6 +697,39 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             case 'B':
                 cullface = !cullface;
                 break;
+            case '-':
+            	terrainSize --;
+            	
+            	if(terrainSize < 20){
+            		terrainDim = 128;
+            	}
+            	else if(terrainSize >= 20 && terrainSize < 30){
+            		terrainDim = 256;
+            	}
+            	else{
+            		terrainDim = 512;
+            	}
+            	
+            	resize();
+            	
+            	break;
+            case '=':
+            case KeyEvent.VK_PLUS:
+            	terrainSize ++;
+            	
+            	if(terrainSize < 20){
+            		terrainDim = 128;
+            	}
+            	else if(terrainSize >= 20 && terrainSize < 30){
+            		terrainDim = 256;
+            	}
+            	else{
+            		terrainDim = 512;
+            	}
+            	
+            	resize();
+            	
+            	break;
         }
     }
 
