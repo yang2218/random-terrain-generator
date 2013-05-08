@@ -329,6 +329,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         gl.glMatrixMode(GL.GL_MODELVIEW);
     }
 
+    // Initialize lighting, shading and objects.
     public void init(GLAutoDrawable drawable) {
         gl = drawable.getGL();
 
@@ -425,7 +426,8 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         
         loadTexture("texture2.bmp");
     }
-
+    
+    // Re-computes the scene when the size of the scene is changed (to add more objects).
     public void resize(){
     	terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
         points = terrain.points;
@@ -612,7 +614,6 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         for (objPosition o : sceneObjects) {
             float x = o.getX();
             float z = o.getZ();
-            float y = 0f;
             float quadDiag = (float) Math.sqrt((2 * Math.pow(terrainSize / terrainDim, 2)));
             for (int i = 0; i < terrain.dim + 1; i++) {
                 for (int j = 0; j < terrain.dim + 1; j++) {
