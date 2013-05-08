@@ -259,7 +259,6 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
     private final GLCanvas canvas;
     private GL gl;
     private final GLU glu = new GLU();
-    private FPSAnimator animator;
     private int winW = 800, winH = 800;
     private boolean wireframe = false;
     private boolean cullface = true;
@@ -270,13 +269,12 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
     private float znear, zfar;
     private int mouseX, mouseY, mouseButton;
     private float motionSpeed, rotateSpeed;
-    private float animation_speed = 1.0f;
     TerrainGenerator terrain;
-    int terrainDim = 512;
-    float terrainSharpness = 3f;
-    float terrainSize = 30f;
+    int terrainDim = 128;
+    float terrainSharpness = 2.5f;
+    float terrainSize = 20f;
     Vector3f[][] points;
-    private int numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random()*0.1f);
+    private int numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random()*0.2f);
     private boolean showTerrain = false;
     private float xmin = -4f, ymin = -4f, zmin = -4f;
     private float xmax = 4f, ymax = 4f, zmax = 4f;
@@ -290,13 +288,11 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
         canvas.addKeyListener(this);
         canvas.addMouseListener(this);
         canvas.addMouseMotionListener(this);
-        animator = new FPSAnimator(canvas, 30); // create a 30 fps animator
         getContentPane().add(canvas);
         setSize(winW, winH);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setVisible(true);
-        animator.start();
         canvas.requestFocus();
     }
 
@@ -434,8 +430,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
     	terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
         points = terrain.points;
         
-        numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random()*0.1f);
-        System.out.println(numberOfObjects);
+        numberOfObjects = (int) (Math.pow(terrainSize, 2) * Math.random()*0.2f);
         sceneObjects = new ArrayList<objPosition>();
         float[][] objPositions = new float[2][numberOfObjects];
         for (int i = 0; i < numberOfObjects; i++) {
@@ -556,8 +551,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
                 objectInt = 0;
             } else if (50 <= tempRand && tempRand < 99) {
                 objectInt = 1;
-            } //else if (70<=tempRand && tempRand<85) {objectInt = 2;}
-            //else if (85<=tempRand && tempRand<95) {objectInt = 3;}
+            }
             else if (99 <= tempRand && tempRand <= 100) {
                 objectInt = 5;
             }
@@ -687,18 +681,16 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
                 System.exit(0);
                 break;
             case KeyEvent.VK_UP:
-                terrainSharpness += 0.1f;
+                terrainSharpness += 0.05f;
                 terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
                 points = terrain.points;
                 setObjYvals();
-                System.out.println(terrainSharpness);
                 break;
             case KeyEvent.VK_DOWN:
-                terrainSharpness -= 0.1f;
+                terrainSharpness -= 0.05f;
                 terrain = new TerrainGenerator(terrainDim, terrainSharpness, terrainSize);
                 points = terrain.points;
                 setObjYvals();
-                System.out.println(terrainSharpness);
                 break;
             case 'w':
             case 'W':
@@ -709,7 +701,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
                 cullface = !cullface;
                 break;
             case '-':
-            	terrainSize --;
+            	terrainSize -= 2;
             	
             	if(terrainSize < 20){
             		terrainDim = 128;
@@ -726,7 +718,7 @@ public class objReader extends JFrame implements MouseListener, MouseMotionListe
             	break;
             case '=':
             case KeyEvent.VK_PLUS:
-            	terrainSize ++;
+            	terrainSize += 2;
             	
             	if(terrainSize < 20){
             		terrainDim = 128;
