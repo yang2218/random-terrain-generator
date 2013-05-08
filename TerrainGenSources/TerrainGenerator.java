@@ -52,7 +52,7 @@ public class TerrainGenerator {
         dim = dimension;
         len = length;
         sharp = sharpness;
-        smooth = 5;
+        smooth = 9;
         min = (float) -sharpness * 0.8f;
         max = (float) sharpness * 1f;
         size = dim;
@@ -76,12 +76,12 @@ public class TerrainGenerator {
         while (stride != 0) {
             // This first if-statement is a hack to make the scene more mountaineous by allowing for huge random values in the first pass.
             if (stride == dim / 2) {
-                max *= 2.5;
-                min *= 2.5;
+                max *= sharp*0.8;
+                min *= sharp*0.8;
             }
             else if (stride == dim / 4) {
-                max *= 2;
-                min *= 2;
+                max *= sharp*0.6;
+                min *= sharp*0.6;
             }
             for (int i = stride; i < dim; i += stride) {
                 for (int j = stride; j < dim; j += stride) {
@@ -126,56 +126,43 @@ public class TerrainGenerator {
                 points[i][j] = new Vector3f((float) (len / dim) * i - (len / 2), yVals[i * size + j], (float) (len / dim) * j - (len / 2));
             }
         }
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                //System.out.println(i * size + j + "   " + points[i][j].x + " " + points[i][j].y + " " + points[i][j].z);
-            }
-        }
-        //System.out.println(yVals.length);
 
     }
     // Generates a random value within the max-min range.
-
     float generateRandom() {
         return (float) Math.random() * (max - min) + min;
     }
     /*
-     Computes "diamond"-points (*-points below) based on the center point X:
-     0   *   0
+     Computes "diamond"-points (*-points below) based on the center point and the corner points (forms 4 diamonds):
+     X   *   X
     
      *   X   *
      
-     0   *   0
+     X   *   X
      */
 
     float avgDiamond(int i, int j) {
-        //System.out.println("diamond i: " + i + " j: " + j + " stride: " + stride);
         if (i == 0) {
-            //System.out.println("diamond i=0:");
             return ((float) (yVals[(i * size) + j - stride]
                     + yVals[(i * size) + j + stride]
                     + yVals[((dim - stride) * size) + j]
                     + yVals[((i + stride) * size) + j]) * .25f);
         } else if (i == size - 1) {
-            //System.out.println("diamond i=size-1:");
             return ((float) (yVals[(i * size) + j - stride]
                     + yVals[(i * size) + j + stride]
                     + yVals[((i - stride) * size) + j]
                     + yVals[((0 + stride) * size) + j]) * .25f);
         } else if (j == 0) {
-            //System.out.println("diamond j=0:");
             return ((float) (yVals[((i - stride) * size) + j]
                     + yVals[((i + stride) * size) + j]
                     + yVals[(i * size) + j + stride]
                     + yVals[(i * size) + dim - stride]) * .25f);
         } else if (j == size - 1) {
-            //System.out.println("diamond j=size-1:");
             return ((float) (yVals[((i - stride) * size) + j]
                     + yVals[((i + stride) * size) + j]
                     + yVals[(i * size) + j - stride]
                     + yVals[(i * size) + 0 + stride]) * .25f);
         } else {
-            //System.out.println("diamond not on edge");
             return ((float) (yVals[((i - stride) * size) + j]
                     + yVals[((i + stride) * size) + j]
                     + yVals[(i * size) + j - stride]
@@ -200,8 +187,7 @@ public class TerrainGenerator {
 
     }
     // A simple Laplacian smoothing algorithm that uses a weighted average of neighboring points.
-    // Lambda (here (smooth/10f)) is 
-
+    // Lambda (here (smooth/10f)) decides how heavy the weighting for the average of the nearby points is.
     void smoothing() {
         for (int i = 1; i < size - 1; i++) {
             for (int j = 1; j < size - 1; j++) {
