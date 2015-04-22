@@ -1,0 +1,1 @@
+A small Java program that generates a 3D environment based on a pseudo random fractal algorithm and a random object placing algorithm. Rendering done with OpenGL.
